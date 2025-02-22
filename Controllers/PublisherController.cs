@@ -1,20 +1,23 @@
-﻿using MusicStore.Data;
-
+﻿using AutoMapper;
+using MusicStore.Data;
+using static MappingProfile;
 
 namespace MusicStore.Controllers
 {
     public class PublisherController
     {
         private readonly MusicStoreDbContext _context;
+        private readonly IMapper _mapper;
 
-        public PublisherController(MusicStoreDbContext context)
+        public PublisherController(MusicStoreDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        public void AddPublisher(string name)
+        public void AddPublisher(AddPublisherDto dto)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(dto.Name))
             {
                 Console.WriteLine("Error: Publisher name cannot be empty.");
                 return;
@@ -22,15 +25,12 @@ namespace MusicStore.Controllers
 
             try
             {
-                var publisher = new Publisher
-                {
-                    Name = name
-                };
+                var publisher = _mapper.Map<Publisher>(dto);
 
                 _context.Publishers.Add(publisher);
                 _context.SaveChanges();
 
-                Console.WriteLine($"Publisher '{name}' added successfully.");
+                Console.WriteLine($"Publisher '{dto.Name}' added successfully.");
             }
             catch (Exception ex)
             {
@@ -87,7 +87,7 @@ namespace MusicStore.Controllers
             }
         }
 
-        public void UpdatePublisher(int id, string name)
+        public void UpdatePublisher(int id, UpdatePublisherDto dto)
         {
             try
             {
@@ -98,13 +98,13 @@ namespace MusicStore.Controllers
                     return;
                 }
 
-                if (string.IsNullOrWhiteSpace(name))
+                if (string.IsNullOrWhiteSpace(dto.Name))
                 {
                     Console.WriteLine("Error: Publisher name cannot be empty.");
                     return;
                 }
 
-                publisher.Name = name;
+                _mapper.Map(dto, publisher);
 
                 _context.Publishers.Update(publisher);
                 _context.SaveChanges();

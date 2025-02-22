@@ -1,21 +1,24 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
 using MusicStore.Data;
-
+using Microsoft.EntityFrameworkCore;
+using static MappingProfile;
 
 namespace MusicStore.Controllers
 {
     public class OrderController
     {
         private readonly MusicStoreDbContext _context;
+        private readonly IMapper _mapper;
 
-        public OrderController(MusicStoreDbContext context)
+        public OrderController(MusicStoreDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        public void AddOrder(int customerId, decimal totalPrice, DateTime orderDate)
+        public void AddOrder(AddOrderDto dto)
         {
-            if (totalPrice <= 0)
+            if (dto.TotalPrice <= 0)
             {
                 Console.WriteLine("Error: Total price must be greater than zero.");
                 return;
@@ -23,20 +26,15 @@ namespace MusicStore.Controllers
 
             try
             {
-                var customer = _context.Customers.Find(customerId);
+                var customer = _context.Customers.Find(dto.CustomerId);
                 if (customer == null)
                 {
-                    Console.WriteLine($"Error: Customer with ID {customerId} not found.");
+                    Console.WriteLine($"Error: Customer with ID {dto.CustomerId} not found.");
                     return;
                 }
 
-                var order = new Order
-                {
-                    CustomerId = customerId,
-                    Customer = customer,
-                    TotalPrice = totalPrice,
-                    OrderDate = orderDate
-                };
+                var order = _mapper.Map<Order>(dto);
+                order.Customer = customer;
 
                 _context.Orders.Add(order);
                 _context.SaveChanges();
@@ -98,7 +96,7 @@ namespace MusicStore.Controllers
             }
         }
 
-        public void UpdateOrder(int id, decimal totalPrice, DateTime orderDate)
+        public void UpdateOrder(int id, UpdateOrderDto dto)
         {
             try
             {
@@ -109,8 +107,7 @@ namespace MusicStore.Controllers
                     return;
                 }
 
-                order.TotalPrice = totalPrice;
-                order.OrderDate = orderDate;
+                _mapper.Map(dto, order);
 
                 _context.Orders.Update(order);
                 _context.SaveChanges();

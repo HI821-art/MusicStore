@@ -1,19 +1,24 @@
-﻿using MusicStore.Data;
+﻿using AutoMapper;
+using MusicStore.Data;
+using Microsoft.EntityFrameworkCore;
+using static MappingProfile;
 
 namespace MusicStore.Controllers
 {
     public class GenreController
     {
         private readonly MusicStoreDbContext _context;
+        private readonly IMapper _mapper;
 
-        public GenreController(MusicStoreDbContext context)
+        public GenreController(MusicStoreDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        public void AddGenre(string name)
+        public void AddGenre(AddGenreDto dto)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(dto.Name))
             {
                 Console.WriteLine("Error: Genre name cannot be empty.");
                 return;
@@ -21,21 +26,18 @@ namespace MusicStore.Controllers
 
             try
             {
-                if (_context.Genres.Any(g => g.Name == name))
+                if (_context.Genres.Any(g => g.Name == dto.Name))
                 {
-                    Console.WriteLine($"Error: Genre '{name}' already exists.");
+                    Console.WriteLine($"Error: Genre '{dto.Name}' already exists.");
                     return;
                 }
 
-                var genre = new Genre
-                {
-                    Name = name
-                };
+                var genre = _mapper.Map<Genre>(dto);
 
                 _context.Genres.Add(genre);
                 _context.SaveChanges();
 
-                Console.WriteLine($"Genre '{name}' added successfully.");
+                Console.WriteLine($"Genre '{dto.Name}' added successfully.");
             }
             catch (Exception ex)
             {
@@ -92,7 +94,7 @@ namespace MusicStore.Controllers
             }
         }
 
-        public void UpdateGenre(int id, string name)
+        public void UpdateGenre(int id, UpdateGenreDto dto)
         {
             try
             {
@@ -103,7 +105,7 @@ namespace MusicStore.Controllers
                     return;
                 }
 
-                genre.Name = name;
+                _mapper.Map(dto, genre);
 
                 _context.Genres.Update(genre);
                 _context.SaveChanges();

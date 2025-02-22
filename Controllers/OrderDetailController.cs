@@ -1,21 +1,24 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
 using MusicStore.Data;
-
+using Microsoft.EntityFrameworkCore;
+using static MappingProfile;
 
 namespace MusicStore.Controllers
 {
     public class OrderDetailController
     {
         private readonly MusicStoreDbContext _context;
+        private readonly IMapper _mapper;
 
-        public OrderDetailController(MusicStoreDbContext context)
+        public OrderDetailController(MusicStoreDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        public void AddOrderDetail(int orderId, int vinylRecordId, int quantity, decimal price)
+        public void AddOrderDetail(AddOrderDetailDto dto)
         {
-            if (quantity <= 0 || price <= 0)
+            if (dto.Quantity <= 0 || dto.Price <= 0)
             {
                 Console.WriteLine("Error: Quantity and price must be greater than zero.");
                 return;
@@ -23,32 +26,26 @@ namespace MusicStore.Controllers
 
             try
             {
-                var order = _context.Orders.Find(orderId);
+                var order = _context.Orders.Find(dto.OrderId);
                 if (order == null)
                 {
-                    Console.WriteLine($"Error: Order with ID {orderId} not found.");
+                    Console.WriteLine($"Error: Order with ID {dto.OrderId} not found.");
                     return;
                 }
 
-                var vinylRecord = _context.VinylRecords.Find(vinylRecordId);
+                var vinylRecord = _context.VinylRecords.Find(dto.VinylRecordId);
                 if (vinylRecord == null)
                 {
-                    Console.WriteLine($"Error: Vinyl record with ID {vinylRecordId} not found.");
+                    Console.WriteLine($"Error: Vinyl record with ID {dto.VinylRecordId} not found.");
                     return;
                 }
 
-                var orderDetail = new OrderDetail
-                {
-                    OrderId = orderId,
-                    VinylRecordId = vinylRecordId,
-                    Quantity = quantity,
-                    Price = price
-                };
+                var orderDetail = _mapper.Map<OrderDetail>(dto);
 
                 _context.OrderDetails.Add(orderDetail);
                 _context.SaveChanges();
 
-                Console.WriteLine($"Order detail added for Order ID {orderId}, Vinyl Record: {vinylRecord.Name}, Quantity: {quantity}, Price: {price:C}");
+                Console.WriteLine($"Order detail added for Order ID {dto.OrderId}, Vinyl Record: {vinylRecord.Name}, Quantity: {dto.Quantity}, Price: {dto.Price:C}");
             }
             catch (Exception ex)
             {
@@ -112,7 +109,7 @@ namespace MusicStore.Controllers
             }
         }
 
-        public void UpdateOrderDetail(int id, int quantity, decimal price)
+        public void UpdateOrderDetail(int id, UpdateOrderDetailDto dto)
         {
             try
             {
@@ -123,8 +120,8 @@ namespace MusicStore.Controllers
                     return;
                 }
 
-                orderDetail.Quantity = quantity;
-                orderDetail.Price = price;
+                orderDetail.Quantity = dto.Quantity;
+                orderDetail.Price = dto.Price;
 
                 _context.OrderDetails.Update(orderDetail);
                 _context.SaveChanges();

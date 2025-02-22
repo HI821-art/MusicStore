@@ -25,7 +25,7 @@ public partial class PopularityService : IPopularityService
                 saleRecord => saleRecord.record.ArtistId,
                 artist => artist.Id,
                 (saleRecord, artist) => new { saleRecord.sale, saleRecord.record, artist })
-            .Join(_context.Genres,  // Додаємо з'єднання з Genres
+            .Join(_context.Genres,  
                 saleRecord => saleRecord.record.GenreId,
                 genre => genre.Id,
                 (saleRecord, genre) => new { saleRecord.sale, saleRecord.record, saleRecord.artist, genre })
@@ -56,7 +56,7 @@ public partial class PopularityService : IPopularityService
 
 
 
-    // Get the most popular genres in a given date range
+    
     public List<GenrePopularity> GetMostPopularGenres(DateTime startDate, DateTime endDate)
     {
         return _context.Sales
@@ -74,7 +74,7 @@ public partial class PopularityService : IPopularityService
             .ToList();
     }
 
-    // Get the most popular artists in a given date range
+    
     public List<ArtistPopularity> GetMostPopularArtists(DateTime startDate, DateTime endDate)
     {
         return _context.Sales
@@ -96,7 +96,7 @@ public partial class PopularityService : IPopularityService
             .ToList();
     }
 
-    // Get the latest vinyl records (released after a specific date)
+    
     public List<VinylRecord> GetNewVinylRecords(DateTime startDate)
     {
         return _context.VinylRecords

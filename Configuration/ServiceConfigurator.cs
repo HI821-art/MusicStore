@@ -18,7 +18,7 @@ namespace MusicStore
             services.AddScoped<IRepository<Reservation>, Repository<Reservation>>();
             services.AddScoped<IRepository<VinylRecord>, Repository<VinylRecord>>();
 
-            services.AddScoped<IAuthService>();
+          
             services.AddScoped<IPopularityService, PopularityService>();
         }
     }

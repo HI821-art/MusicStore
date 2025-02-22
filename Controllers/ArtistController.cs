@@ -1,20 +1,24 @@
-﻿using MusicStore.Data;
+﻿using AutoMapper;
+using MusicStore.Data;
+using Microsoft.EntityFrameworkCore;
+using static MappingProfile;
 
 namespace MusicStore.Controllers
 {
     public class ArtistController
     {
         private readonly MusicStoreDbContext _context;
+        private readonly IMapper _mapper;
 
-        public ArtistController(MusicStoreDbContext context)
+        public ArtistController(MusicStoreDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        // Метод для додавання артиста
-        public void AddArtist(string name, string bio, string genreName)
+        public void AddArtist(AddArtistDto dto)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(dto.Name))
             {
                 Console.WriteLine("Error: Artist name cannot be empty.");
                 return;
@@ -22,27 +26,18 @@ namespace MusicStore.Controllers
 
             try
             {
-                // Знайти жанр за назвою
-                var genre = _context.Genres.FirstOrDefault(g => g.Name == genreName);
+                var genre = _context.Genres.FirstOrDefault(g => g.Name == dto.GenreName);
                 if (genre == null)
                 {
-                    Console.WriteLine($"Error: Genre '{genreName}' not found.");
+                    Console.WriteLine($"Error: Genre '{dto.GenreName}' not found.");
                     return;
                 }
 
-                // Створити нового артиста
-                var artist = new Artist
-                {
-                    Name = name,
-                    Bio = bio,
-                   
-                };
-
-                // Додаємо артиста до контексту
+                var artist = _mapper.Map<Artist>(dto);
                 _context.Artists.Add(artist);
                 _context.SaveChanges();
 
-                Console.WriteLine($"Artist '{name}' added successfully.");
+                Console.WriteLine($"Artist '{dto.Name}' added successfully.");
             }
             catch (Exception ex)
             {
@@ -50,7 +45,6 @@ namespace MusicStore.Controllers
             }
         }
 
-        // Метод для переліку всіх артистів
         public void ListArtists()
         {
             var artists = _context.Artists.ToList();
@@ -67,7 +61,18 @@ namespace MusicStore.Controllers
             }
         }
 
-        // Метод для видалення артиста
+        public void GetArtistById(int id)
+        {
+            var artist = _context.Artists.Find(id);
+            if (artist == null)
+            {
+                Console.WriteLine($"Artist with ID {id} not found.");
+                return;
+            }
+
+            Console.WriteLine($"Id: {artist.Id}, Name: {artist.Name}, Bio: {artist.Bio}");
+        }
+
         public void DeleteArtist(int id)
         {
             try
@@ -89,17 +94,28 @@ namespace MusicStore.Controllers
             }
         }
 
-        
-        public void GetArtistById(int id)
+        public void UpdateArtist(int id, UpdateArtistDto dto)
         {
-            var artist = _context.Artists.Find(id);
-            if (artist == null)
+            try
             {
-                Console.WriteLine($"Artist with ID {id} not found.");
-                return;
-            }
+                var artist = _context.Artists.Find(id);
+                if (artist == null)
+                {
+                    Console.WriteLine($"Error: Artist with ID {id} not found.");
+                    return;
+                }
 
-            Console.WriteLine($"Id: {artist.Id}, Name: {artist.Name}, Bio: {artist.Bio}");
+                _mapper.Map(dto, artist);
+
+                _context.Artists.Update(artist);
+                _context.SaveChanges();
+
+                Console.WriteLine($"Artist '{artist.Name}' updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating artist: {ex.Message}");
+            }
         }
     }
 }

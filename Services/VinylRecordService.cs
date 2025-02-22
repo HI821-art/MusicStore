@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using MusicStore.Services;
 
 public class VinylRecordService : IVinylRecordService
@@ -11,7 +12,8 @@ public class VinylRecordService : IVinylRecordService
     private readonly IRepository<Order> _orderRepository;
     private readonly IRepository<OrderDetail> _orderDetailRepository;
     private readonly IRepository<Sale> _saleRepository;
-    private readonly DbContext _context; // Add this line
+    private readonly DbContext _context;
+    private readonly IMapper _mapper;
 
     public VinylRecordService(
         IRepository<VinylRecord> vinylRecordRepository,
@@ -22,7 +24,8 @@ public class VinylRecordService : IVinylRecordService
         IRepository<Order> orderRepository,
         IRepository<OrderDetail> orderDetailRepository,
         IRepository<Sale> saleRepository,
-        DbContext context) // Add this parameter
+        DbContext context,
+        IMapper mapper)
     {
         _vinylRecordRepository = vinylRecordRepository;
         _artistRepository = artistRepository;
@@ -32,40 +35,43 @@ public class VinylRecordService : IVinylRecordService
         _orderRepository = orderRepository;
         _orderDetailRepository = orderDetailRepository;
         _saleRepository = saleRepository;
-        _context = context; // Initialize the context
+        _context = context;
+        _mapper = mapper;
     }
 
-    public IEnumerable<VinylRecord> GetAllVinylRecords()
+    public async Task<IEnumerable<VinylRecord>> GetAllVinylRecords()
     {
-        return _context.Set<VinylRecord>()
-                      .Include(v => v.Artist)
-                       .Include(v => v.Genre)
-                       .ToList();
+        return await _context.Set<VinylRecord>()
+                             .Include(v => v.Artist)
+                             .Include(v => v.Genre)
+                             .ToListAsync();
     }
 
-    public VinylRecord GetVinylRecordById(int id)
+    public async Task<VinylRecord> GetVinylRecordById(int id)
     {
-        return _vinylRecordRepository.GetByIdAsync(id).Result;
+        return await _vinylRecordRepository.GetByIdAsync(id);
     }
 
-    public void AddVinylRecord(VinylRecord vinylRecord)
+    
+
+    public async Task UpdateVinylRecord(VinylRecordDto vinylRecordDto)
     {
-        _vinylRecordRepository.AddAsync(vinylRecord).Wait();
+        var vinylRecord = await _vinylRecordRepository.GetByIdAsync(vinylRecordDto.Id);
+        if (vinylRecord != null)
+        {
+            _mapper.Map(vinylRecordDto, vinylRecord);
+            await _vinylRecordRepository.UpdateAsync(vinylRecord);
+        }
     }
 
-    public void UpdateVinylRecord(VinylRecord vinylRecord)
+    public async Task DeleteVinylRecord(int id)
     {
-        _vinylRecordRepository.UpdateAsync(vinylRecord).Wait();
+        await _vinylRecordRepository.DeleteAsync(id);
     }
 
-    public void DeleteVinylRecord(int id)
+    public async Task SellVinylRecord(int vinylId, int quantity, int customerId)
     {
-        _vinylRecordRepository.DeleteAsync(id).Wait();
-    }
-
-    public void SellVinylRecord(int vinylId, int quantity, int customerId)
-    {
-        var vinyl = _vinylRecordRepository.GetByIdAsync(vinylId).Result;
+        var vinyl = await _vinylRecordRepository.GetByIdAsync(vinylId);
 
         if (vinyl == null || vinyl.Stock < quantity)
             throw new InvalidOperationException("Недостатньо товару на складі!");
@@ -81,38 +87,38 @@ public class VinylRecordService : IVinylRecordService
             CustomerId = customerId
         };
 
-        _saleRepository.AddAsync(sale).Wait();
+        await _saleRepository.AddAsync(sale);
     }
 
-    public void WriteOffVinylRecord(int vinylId)
+    public async Task WriteOffVinylRecord(int vinylId)
     {
-        var record = _vinylRecordRepository.GetByIdAsync(vinylId).Result;
+        var record = await _vinylRecordRepository.GetByIdAsync(vinylId);
 
         if (record != null)
         {
             record.Stock = 0;
-            _vinylRecordRepository.UpdateAsync(record).Wait();
+            await _vinylRecordRepository.UpdateAsync(record);
         }
     }
 
-    public void AddVinylRecordToPromotion(int vinylId, int promotionId)
+    public async Task AddVinylRecordToPromotion(int vinylId, int promotionId)
     {
-        var promotion = _promotionRepository.GetByIdAsync(promotionId).Result;
+        var promotion = await _promotionRepository.GetByIdAsync(promotionId);
         if (promotion != null)
         {
-            var vinylRecord = _vinylRecordRepository.GetByIdAsync(vinylId).Result;
+            var vinylRecord = await _vinylRecordRepository.GetByIdAsync(vinylId);
             promotion.VinylRecords.Add(vinylRecord);
-            _promotionRepository.UpdateAsync(promotion).Wait();
+            await _promotionRepository.UpdateAsync(promotion);
         }
     }
 
-    public void ReserveVinylRecord(int vinylId, int customerId)
+    public async Task ReserveVinylRecord(int vinylId, int customerId)
     {
         var reservation = new Reservation { VinylRecordId = vinylId, CustomerId = customerId, ReservedAt = DateTime.UtcNow };
-        _reservationRepository.AddAsync(reservation).Wait();
+        await _reservationRepository.AddAsync(reservation);
     }
 
-    public IEnumerable<VinylRecord> SearchVinylRecords(string name, string artist, string genre)
+    public async Task<IEnumerable<VinylRecord>> SearchVinylRecords(string name, string artist, string genre)
     {
         var query = _vinylRecordRepository.Query();
 
@@ -125,28 +131,38 @@ public class VinylRecordService : IVinylRecordService
         if (!string.IsNullOrEmpty(genre))
             query = query.Where(v => v.Genre.Name.Contains(genre));
 
-        return query.ToList();
+        return await query.ToListAsync();
     }
 
-    public Artist GetOrCreateArtist(string artistName)
+    public async Task<Artist> GetOrCreateArtist(string artistName)
     {
-        var artist = _artistRepository.Query().FirstOrDefault(a => a.Name == artistName);
+        var artist = await _artistRepository.Query().FirstOrDefaultAsync(a => a.Name == artistName);
         if (artist == null)
         {
             artist = new Artist { Name = artistName };
-            _artistRepository.AddAsync(artist).Wait();
+            await _artistRepository.AddAsync(artist);
         }
         return artist;
     }
 
-    public Genre GetOrCreateGenre(string genreName)
+    public async Task<Genre> GetOrCreateGenre(string genreName)
     {
-        var genre = _genreRepository.Query().FirstOrDefault(g => g.Name == genreName);
+        var genre = await _genreRepository.Query().FirstOrDefaultAsync(g => g.Name == genreName);
         if (genre == null)
         {
             genre = new Genre { Name = genreName };
-            _genreRepository.AddAsync(genre).Wait();
+            await _genreRepository.AddAsync(genre);
         }
         return genre;
+    }
+
+    public Task AddVinylRecord(VinylRecord vinylRecord)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task UpdateVinylRecord(VinylRecord vinylRecord)
+    {
+        throw new NotImplementedException();
     }
 }

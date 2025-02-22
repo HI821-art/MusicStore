@@ -5,8 +5,3 @@
 
     public List<VinylRecord> VinylRecords { get; set; } = new List<VinylRecord>();
 }
-public class GenrePopularity
-{
-    public string GenreName { get; set; }
-    public int TotalSales { get; set; }
-}

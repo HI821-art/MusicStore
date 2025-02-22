@@ -1,28 +1,32 @@
-﻿using MusicStore.Data;
+﻿using AutoMapper;
+using MusicStore.Data;
+using Microsoft.EntityFrameworkCore;
+using static MappingProfile;
+
 namespace MusicStore.Controllers
 {
     public class CustomerController
     {
         private readonly MusicStoreDbContext _context;
+        private readonly IMapper _mapper;
 
-        public CustomerController(MusicStoreDbContext context)
+        public CustomerController(MusicStoreDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        // Метод для додавання клієнта
-        public void AddCustomer(string username, string password, string firstName, string lastName, string email, string phone)
+        public void AddCustomer(AddCustomerDto dto)
         {
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password) ||
-                string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName) ||
-                string.IsNullOrWhiteSpace(email))
+            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password) ||
+                string.IsNullOrWhiteSpace(dto.FirstName) || string.IsNullOrWhiteSpace(dto.LastName) ||
+                string.IsNullOrWhiteSpace(dto.Email))
             {
                 Console.WriteLine("Error: All fields except phone are required.");
                 return;
             }
 
-            // Додаткові перевірки формату email та телефону
-            if (!IsValidEmail(email))
+            if (!IsValidEmail(dto.Email))
             {
                 Console.WriteLine("Error: Invalid email format.");
                 return;
@@ -30,25 +34,19 @@ namespace MusicStore.Controllers
 
             try
             {
-                if (_context.Customers.Any(c => c.Email == email))
+                if (_context.Customers.Any(c => c.Email == dto.Email))
                 {
                     Console.WriteLine("Error: This email is already registered.");
                     return;
                 }
 
-                var customer = new Customer
-                {
-                    FirstName = firstName,
-                    LastName = lastName,
-                    Email = email,
-                    Phone = phone,
-                    TotalSpent = 0 // Ініціалізація
-                };
+                var customer = _mapper.Map<Customer>(dto);
+                customer.TotalSpent = 0; // Ініціалізація
 
                 _context.Customers.Add(customer);
                 _context.SaveChanges();
 
-                Console.WriteLine($"Customer {firstName} {lastName} added successfully.");
+                Console.WriteLine($"Customer {dto.FirstName} {dto.LastName} added successfully.");
             }
             catch (Exception ex)
             {
@@ -56,7 +54,6 @@ namespace MusicStore.Controllers
             }
         }
 
-        // Метод для переліку всіх клієнтів
         public void ListCustomers()
         {
             var customers = _context.Customers.ToList();
@@ -73,7 +70,6 @@ namespace MusicStore.Controllers
             }
         }
 
-        // Метод для отримання клієнта за ID
         public void GetCustomerById(int id)
         {
             var customer = _context.Customers.Find(id);
@@ -86,7 +82,6 @@ namespace MusicStore.Controllers
             Console.WriteLine($"Id: {customer.Id}, Name: {customer.FirstName} {customer.LastName}, Email: {customer.Email}, Phone: {customer.Phone ?? "N/A"}");
         }
 
-        // Метод для видалення клієнта
         public void DeleteCustomer(int id)
         {
             try
@@ -108,7 +103,30 @@ namespace MusicStore.Controllers
             }
         }
 
-        
+        public void UpdateCustomer(int id, UpdateCustomerDto dto)
+        {
+            try
+            {
+                var customer = _context.Customers.Find(id);
+                if (customer == null)
+                {
+                    Console.WriteLine($"Error: Customer with ID {id} not found.");
+                    return;
+                }
+
+                _mapper.Map(dto, customer);
+
+                _context.Customers.Update(customer);
+                _context.SaveChanges();
+
+                Console.WriteLine($"Customer '{customer.FirstName} {customer.LastName}' updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating customer: {ex.Message}");
+            }
+        }
+
         private bool IsValidEmail(string email)
         {
             try

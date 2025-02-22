@@ -1,31 +1,36 @@
-﻿using MusicStore.Data;
+﻿using AutoMapper;
+using MusicStore.Data;
+using Microsoft.EntityFrameworkCore;
+using static MappingProfile;
 
 namespace MusicStore.Controllers
 {
     public class DiscountController
     {
         private readonly MusicStoreDbContext _context;
+        private readonly IMapper _mapper;
 
-        public DiscountController(MusicStoreDbContext context)
+        public DiscountController(MusicStoreDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        public void AddDiscount(string name, decimal percentage, DateTime startDate, DateTime endDate)
+        public void AddDiscount(AddDiscountDto dto)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(dto.Name))
             {
                 Console.WriteLine("Error: Discount name cannot be empty.");
                 return;
             }
 
-            if (percentage <= 0 || percentage > 100)
+            if (dto.Percentage <= 0 || dto.Percentage > 100)
             {
                 Console.WriteLine("Error: Discount percentage must be between 0 and 100.");
                 return;
             }
 
-            if (startDate >= endDate)
+            if (dto.StartDate >= dto.EndDate)
             {
                 Console.WriteLine("Error: Start date must be earlier than end date.");
                 return;
@@ -33,24 +38,18 @@ namespace MusicStore.Controllers
 
             try
             {
-                if (_context.Discounts.Any(d => d.Name == name))
+                if (_context.Discounts.Any(d => d.Name == dto.Name))
                 {
-                    Console.WriteLine($"Error: Discount with the name '{name}' already exists.");
+                    Console.WriteLine($"Error: Discount with the name '{dto.Name}' already exists.");
                     return;
                 }
 
-                var discount = new Discount
-                {
-                    Name = name,
-                    Percentage = percentage,
-                    StartDate = startDate,
-                    EndDate = endDate
-                };
+                var discount = _mapper.Map<Discount>(dto);
 
                 _context.Discounts.Add(discount);
                 _context.SaveChanges();
 
-                Console.WriteLine($"Discount '{name}' added successfully.");
+                Console.WriteLine($"Discount '{dto.Name}' added successfully.");
             }
             catch (Exception ex)
             {
@@ -107,7 +106,7 @@ namespace MusicStore.Controllers
             }
         }
 
-        public void UpdateDiscount(int id, string name, decimal percentage, DateTime startDate, DateTime endDate)
+        public void UpdateDiscount(int id, UpdateDiscountDto dto)
         {
             try
             {
@@ -118,10 +117,7 @@ namespace MusicStore.Controllers
                     return;
                 }
 
-                discount.Name = name;
-                discount.Percentage = percentage;
-                discount.StartDate = startDate;
-                discount.EndDate = endDate;
+                _mapper.Map(dto, discount);
 
                 _context.Discounts.Update(discount);
                 _context.SaveChanges();

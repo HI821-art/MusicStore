@@ -1,19 +1,23 @@
-﻿using MusicStore.Data;
+﻿using AutoMapper;
+using MusicStore.Data;
+using Microsoft.EntityFrameworkCore;    
 
 namespace MusicStore.Controllers
 {
     public class VinylRecordController
     {
         private readonly MusicStoreDbContext _context;
+        private readonly IMapper _mapper;
 
-        public VinylRecordController(MusicStoreDbContext context)
+        public VinylRecordController(MusicStoreDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        public void AddVinylRecord(string name, int year, int tracks, decimal salePrice, DateTime releaseDate, int stock, int artistId, int publisherId, int genreId)
+        public void AddVinylRecord(VinylRecordDto vinylRecordCreateDto)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(vinylRecordCreateDto.Name))
             {
                 Console.WriteLine("Error: Vinyl record name cannot be empty.");
                 return;
@@ -21,36 +25,26 @@ namespace MusicStore.Controllers
 
             try
             {
-                var artist = _context.Artists.Find(artistId);
-                var publisher = _context.Publishers.Find(publisherId);
-                var genre = _context.Genres.Find(genreId);
+                var artist = _context.Artists.Find(vinylRecordCreateDto.ArtistId);
+                var publisher = _context.Publishers.Find(vinylRecordCreateDto.PublisherId);
+                var genre = _context.Genres.Find(vinylRecordCreateDto.GenreId);
 
                 if (artist == null || publisher == null || genre == null)
                 {
-                    Console.WriteLine("Error: Invalid artist, publisher or genre.");
+                    Console.WriteLine("Error: Invalid artist, publisher, or genre.");
                     return;
                 }
 
-                var vinylRecord = new VinylRecord
-                {
-                    Name = name,
-                    Year = year,
-                    Tracks = tracks,
-                    SalePrice = salePrice,
-                    ReleaseDate = releaseDate,
-                    Stock = stock,
-                    ArtistId = artistId,
-                    PublisherId = publisherId,
-                    GenreId = genreId,
-                    Artist = artist,
-                    Publisher = publisher,
-                    Genre = genre
-                };
+                var vinylRecord = _mapper.Map<VinylRecord>(vinylRecordCreateDto);  
+
+                vinylRecord.Artist = artist;
+                vinylRecord.Publisher = publisher;
+                vinylRecord.Genre = genre;
 
                 _context.VinylRecords.Add(vinylRecord);
                 _context.SaveChanges();
 
-                Console.WriteLine($"Vinyl record '{name}' added successfully.");
+                Console.WriteLine($"Vinyl record '{vinylRecord.Name}' added successfully.");
             }
             catch (Exception ex)
             {
@@ -60,7 +54,7 @@ namespace MusicStore.Controllers
 
         public void ListVinylRecords()
         {
-            var vinylRecords = _context.VinylRecords.ToList();
+            var vinylRecords = _context.VinylRecords.Include(v => v.Artist).Include(v => v.Genre).Include(v => v.Publisher).ToList();
             if (vinylRecords.Count == 0)
             {
                 Console.WriteLine("No vinyl records found.");
@@ -76,7 +70,7 @@ namespace MusicStore.Controllers
 
         public void GetVinylRecordById(int id)
         {
-            var vinylRecord = _context.VinylRecords.Find(id);
+            var vinylRecord = _context.VinylRecords.Include(v => v.Artist).Include(v => v.Genre).Include(v => v.Publisher).FirstOrDefault(v => v.Id == id);
             if (vinylRecord == null)
             {
                 Console.WriteLine($"Vinyl record with ID {id} not found.");
@@ -107,7 +101,7 @@ namespace MusicStore.Controllers
             }
         }
 
-        public void UpdateVinylRecord(int id, string name, int year, int tracks, decimal salePrice, DateTime releaseDate, int stock, int artistId, int publisherId, int genreId)
+        public void UpdateVinylRecord(int id, VinylRecordDto vinylRecordDto)
         {
             try
             {
@@ -118,9 +112,9 @@ namespace MusicStore.Controllers
                     return;
                 }
 
-                var artist = _context.Artists.Find(artistId);
-                var publisher = _context.Publishers.Find(publisherId);
-                var genre = _context.Genres.Find(genreId);
+                var artist = _context.Artists.Find(vinylRecordDto.ArtistId);
+                var publisher = _context.Publishers.Find(vinylRecordDto.PublisherId);
+                var genre = _context.Genres.Find(vinylRecordDto.GenreId);
 
                 if (artist == null || publisher == null || genre == null)
                 {
@@ -128,22 +122,11 @@ namespace MusicStore.Controllers
                     return;
                 }
 
-                vinylRecord.Name = name;
-                vinylRecord.Year = year;
-                vinylRecord.Tracks = tracks;
-                vinylRecord.SalePrice = salePrice;
-                vinylRecord.ReleaseDate = releaseDate;
-                vinylRecord.Stock = stock;
-                vinylRecord.ArtistId = artistId;
-                vinylRecord.PublisherId = publisherId;
-                vinylRecord.GenreId = genreId;
-                vinylRecord.Artist = artist;
-                vinylRecord.Publisher = publisher;
-                vinylRecord.Genre = genre;
+                _mapper.Map(vinylRecordDto, vinylRecord);  
 
                 _context.SaveChanges();
 
-                Console.WriteLine($"Vinyl record '{name}' updated successfully.");
+                Console.WriteLine($"Vinyl record '{vinylRecordDto.Name}' updated successfully.");
             }
             catch (Exception ex)
             {

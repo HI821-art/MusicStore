@@ -20,7 +20,8 @@ class Program
             .AddSingleton<IRepository<OrderDetail>, Repository<OrderDetail>>()
             .AddSingleton<IRepository<Sale>, Repository<Sale>>()
             .AddSingleton<IVinylRecordService, VinylRecordService>()
-            .AddScoped<DbContext, MusicStoreDbContext>() // Add this line
+            .AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies())
+            .AddScoped<DbContext, MusicStoreDbContext>()
             .BuildServiceProvider();
 
         var vinylRecordService = serviceProvider.GetService<IVinylRecordService>();
@@ -85,10 +86,10 @@ class Program
         }
     }
 
-    static void ViewAllVinylRecords(IVinylRecordService service)
+    static async Task ViewAllVinylRecords(IVinylRecordService service)
     {
-        var records = service.GetAllVinylRecords();
-        if (!records.Any())
+        var records = await service.GetAllVinylRecords(); 
+        if (records == null || !records.Any()) 
         {
             Console.WriteLine("Платівки відсутні.");
             return;
@@ -100,18 +101,18 @@ class Program
         }
     }
 
-    static void AddVinylRecord(IVinylRecordService service)
+    static async Task AddVinylRecord(IVinylRecordService service)
     {
         Console.Write("Назва платівки: ");
         string? name = Console.ReadLine();
 
         Console.Write("Виконавець: ");
         string? artistName = Console.ReadLine();
-        var artist = service.GetOrCreateArtist(artistName ?? string.Empty);
+        var artist = await service.GetOrCreateArtist(artistName ?? string.Empty); 
 
         Console.Write("Жанр: ");
         string? genreName = Console.ReadLine();
-        var genre = service.GetOrCreateGenre(genreName ?? string.Empty);
+        var genre = await service.GetOrCreateGenre(genreName ?? string.Empty); 
 
         Console.Write("Кількість треків: ");
         if (!int.TryParse(Console.ReadLine(), out int trackCount))
@@ -153,9 +154,10 @@ class Program
             Stock = 10
         };
 
-        service.AddVinylRecord(record);
+        await service.AddVinylRecord(record); 
         Console.WriteLine("Платівку додано.");
     }
+
 
     static void DeleteVinylRecord(IVinylRecordService service)
     {
@@ -170,7 +172,7 @@ class Program
         Console.WriteLine("Платівку видалено.");
     }
 
-    static void UpdateVinylRecord(IVinylRecordService service)
+    static async Task UpdateVinylRecord(IVinylRecordService service)
     {
         Console.Write("Введіть ID платівки для редагування: ");
         if (!int.TryParse(Console.ReadLine(), out int id))
@@ -179,7 +181,7 @@ class Program
             return;
         }
 
-        var record = service.GetVinylRecordById(id);
+        var record = await service.GetVinylRecordById(id);
         if (record == null)
         {
             Console.WriteLine("Платівку не знайдено.");
@@ -194,9 +196,10 @@ class Program
         string? priceInput = Console.ReadLine();
         if (decimal.TryParse(priceInput, out decimal newPrice)) record.SellingPrice = newPrice;
 
-        service.UpdateVinylRecord(record);
+        await service.UpdateVinylRecord(record);
         Console.WriteLine("Платівку оновлено.");
     }
+
 
     static void SellVinylRecord(IVinylRecordService service)
     {
@@ -278,7 +281,7 @@ class Program
         Console.WriteLine("Платівку зарезервовано.");
     }
 
-    static void SearchVinylRecords(IVinylRecordService service)
+    static async Task SearchVinylRecords(IVinylRecordService service)
     {
         Console.Write("Назва платівки (або Enter, щоб пропустити): ");
         string? name = Console.ReadLine();
@@ -289,7 +292,7 @@ class Program
         Console.Write("Жанр (або Enter, щоб пропустити): ");
         string? genre = Console.ReadLine();
 
-        var results = service.SearchVinylRecords(name ?? string.Empty, artist ?? string.Empty, genre ?? string.Empty);
+        var results = await service.SearchVinylRecords(name ?? string.Empty, artist ?? string.Empty, genre ?? string.Empty);
         if (results == null || !results.Any())
         {
             Console.WriteLine("Нічого не знайдено.");
@@ -301,4 +304,5 @@ class Program
             Console.WriteLine($"{record.Id}. {record.Name} - {record.Artist?.Name ?? "Unknown Artist"} ({record.Genre?.Name ?? "Unknown Genre"}) - {record.SellingPrice} грн");
         }
     }
+
 }
